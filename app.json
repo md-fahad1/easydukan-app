@@ -24,7 +24,8 @@
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "CAMERA"
+        "CAMERA",
+        "android.permission.CAMERA"
       ],
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO",
@@ -58,6 +59,13 @@
     ],
     "experiments": {
       "typedRoutes": false
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "29e7ae12-953b-4223-af8d-a5a502ff727f"
+      }
+    },
+    "owner": "mdfahad11"
   }
 }
