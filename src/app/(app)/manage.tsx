@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { ExpiryInput, parseMonth, toMonthText } from '@/components/ExpiryInput';
-import { Btn, Card, Chip, confirm, Empty, errMsg, H1, Input, Muted, Notice, Page, Split, Text, useLoad } from '@/components/ui';
+import { Btn, Card, confirm, Empty, errMsg, IconBox, Input, Muted, Notice, Page, Segment, Split, Text, useLoad } from '@/components/ui';
 import { dateOf, num, qtyFmt, taka, timeOf } from '@/lib/format';
 import { r2, UNIT_BN } from '@/lib/pharma';
 import { deletePurchase, deleteSale, editPurchase, editSale, managePurchases, manageSales } from '@/services/edits';
@@ -69,26 +69,26 @@ export default function Manage() {
 
   return (
     <Page onRefresh={reload}>
-      <H1>সংশোধন / মুছুন</H1>
-      <View className="flex-row gap-2"><Chip className="flex-1 items-center" label="বিক্রি" on={tab === 'sale'} onPress={() => setTab('sale')} /><Chip className="flex-1 items-center" label="মাল কেনা" on={tab === 'purchase'} onPress={() => setTab('purchase')} /></View>
-      <View className="flex-row gap-2">{DAYS.map(([d, l]) => <Chip key={d} className="flex-1 items-center" label={l} on={days === d} onPress={() => setDays(d)} />)}</View>
+      <Segment value={tab} onChange={setTab} options={[['sale', 'বিক্রি'], ['purchase', 'মাল কেনা']]} />
+      <Segment small value={days} onChange={setDays} options={DAYS} />
       <Notice kind="ok">{ok}</Notice><Notice kind="err">{e2 || err}</Notice>
       <View className="gap-2">
         {list.map((x: any) => (
           <Card key={x.id} className="p-0 overflow-hidden">
-            <Pressable onPress={() => toggle(x.id)} className="p-4 flex-row justify-between gap-3 active:bg-slate-50">
+            <Pressable onPress={() => toggle(x.id)} className="p-4 flex-row items-center gap-3 active:bg-slate-50">
+              <IconBox name={tab === 'sale' ? 'receipt-outline' : 'cube-outline'} size={40} tone={open === x.id ? 'brand' : 'slate'} />
               <View className="flex-1"><Text className="font-bold" numberOfLines={1}>{tab === 'sale' ? x.customerName || 'নগদ কাস্টমার' : x.supplierName || 'কোম্পানি ছাড়া'}</Text><Muted>{dateOf(x.createdAt)} • {timeOf(x.createdAt)}</Muted><Muted>{x.items.map((i: any) => i.name).join(', ') || 'শুধু টাকার হিসাব'}</Muted></View>
               <View className="items-end"><Text className="font-bold">{taka(x.total)}</Text>{(tab === 'sale' ? x.dueAmount : x.due) > 0 && <Text className="text-xs text-amber-600">বাকি {taka(tab === 'sale' ? x.dueAmount : x.due)}</Text>}</View>
             </Pressable>
             {open === x.id && !editing && (
-              <View className="border-t border-line bg-slate-50 p-4 gap-3">
+              <View className="border-t border-line bg-canvas p-4 gap-3">
                 {x.items.map((i: any) => <View key={i.id} className="flex-row justify-between"><Text className="text-sm flex-1">{i.name} × {qtyFmt(i.qty)} {unitOf(i.unit)}</Text><Text className="text-sm">{taka(i.qty * (tab === 'sale' ? i.price : i.cost))}</Text></View>)}
                 {tab === 'sale' && x.hasReturn && <Text className="text-sm text-rose-600">এই বিক্রিতে ফেরত আছে — মুছা বা সংশোধন করা যাবে না।</Text>}
                 <Split><View className="flex-1"><Btn title="সংশোধন" icon="create" variant="outline" small disabled={busy || (tab === 'sale' && x.hasReturn)} onPress={() => startEdit(x)} /></View><View className="flex-1"><Btn title="মুছুন" icon="trash" variant="danger" small disabled={busy || (tab === 'sale' && x.hasReturn)} onPress={() => del(x)} /></View></Split>
               </View>
             )}
             {open === x.id && editing && (
-              <View className="border-t border-line bg-slate-50 p-4 gap-3">
+              <View className="border-t border-line bg-canvas p-4 gap-3">
                 {rows.map((r, k) => (
                   <View key={r.id} className="bg-white rounded-xl border border-line p-3 gap-2">
                     <Text className="font-semibold">{r.name} {r.unit ? <Text className="text-sm text-slate-500">({unitOf(r.unit)})</Text> : null}</Text>
@@ -102,13 +102,13 @@ export default function Manage() {
                     <View className="flex-row gap-3"><Input label="বিকাশ" keyboardType="decimal-pad" value={bkash} onChangeText={setBkash} /><Input label={`বাকি ${x.customerId ? '' : '(কাস্টমার নেই)'}`} editable={!!x.customerId} keyboardType="decimal-pad" value={due} onChangeText={setDue} /></View>
                     <View className="flex-row"><Input placeholder="নোট (ঐচ্ছিক)" value={note} onChangeText={setNote} /></View>
                     <Card className="gap-1"><View className="flex-row justify-between"><Text>নতুন মোট</Text><Text className="font-bold">{taka(saleTotal)}</Text></View><View className="flex-row justify-between"><Text className="text-slate-600">নগদ (বাকিটা)</Text><Text className="font-bold">{taka(saleCash)}</Text></View></Card>
-                    <Btn title="সেভ করুন" icon="checkmark" loading={busy} onPress={() => saveSale(x)} />
+                    <Btn title="সেভ করুন" icon="checkmark" variant="dark" loading={busy} onPress={() => saveSale(x)} />
                   </>
                 ) : (
                   <>
                     <View className="flex-row"><Input label="কত টাকা দিয়েছেন" keyboardType="decimal-pad" value={paid} onChangeText={setPaid} /></View>
                     <Card className="gap-1"><View className="flex-row justify-between"><Text>নতুন মোট</Text><Text className="font-bold">{taka(purTotal)}</Text></View><View className="flex-row justify-between"><Text className="text-amber-700">বাকি থাকবে</Text><Text className="font-bold text-amber-700">{taka(Math.max(r2(purTotal - num(paid)), 0))}</Text></View></Card>
-                    <Btn title="সেভ করুন" icon="checkmark" loading={busy} onPress={() => savePurchase(x)} />
+                    <Btn title="সেভ করুন" icon="checkmark" variant="dark" loading={busy} onPress={() => savePurchase(x)} />
                   </>
                 )}
                 <Btn title="বাতিল" variant="ghost" onPress={() => setEditing(false)} />

@@ -1,12 +1,13 @@
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
-import { Badge, Btn, Card, Chip, Chips, Empty, errMsg, H1, H2, Icon, Input, Label, Muted, Notice, Page, Pick, Text, useLoad } from '@/components/ui';
+import { Pressable, TextInput, View } from 'react-native';
+import { Badge, Btn, Card, Empty, errMsg, FONT, Icon, IconBox, IconName, Input, Label, Muted, Notice, Page, Pick, SectionHead, Text, useLoad } from '@/components/ui';
 import { num, qtyFmt, taka, timeOf } from '@/lib/format';
 import { createCustomer, createSale, customers, products, sales } from '@/services/shop';
 
 type Line = { productId: string; name: string; price: number; qty: string };
-const PAY: [string, string][] = [['CASH', 'নগদ'], ['BKASH', 'বিকাশ'], ['PART', 'নগদ + বাকি'], ['DUE', 'পুরো বাকি']];
+const PAY: [string, string, IconName][] = [['CASH', 'নগদ', 'cash'], ['BKASH', 'বিকাশ', 'phone-portrait'], ['PART', 'নগদ + বাকি', 'git-compare'], ['DUE', 'পুরো বাকি', 'time']];
+const QUICK = [100, 200, 500, 1000];
 
 export default function Sale() {
   const sp = useLocalSearchParams<{ customer?: string; due?: string }>();
@@ -56,45 +57,89 @@ export default function Sale() {
     setBusy(false);
   };
 
+  const list = data?.sales ?? [];
+  const todayTotal = list.reduce((a: number, s: any) => a + s.total, 0);
+
   return (
     <Page>
-      <H1>আজকের বিক্রি</H1>
-      <View className="flex-row gap-2">
-        <Chip className="flex-1 items-center" label="⚡ দ্রুত বিক্রি" on={mode === 'quick'} onPress={() => setMode('quick')} />
-        <Chip className="flex-1 items-center" label="📦 পণ্য দিয়ে" on={mode === 'product'} onPress={() => setMode('product')} />
+      {/* ---------- মোড বদলের সুইচ ---------- */}
+      <View className="flex-row bg-white rounded-full p-1 border border-line">
+        {([['quick', 'দ্রুত বিক্রি', 'flash'], ['product', 'পণ্য দিয়ে', 'cube']] as const).map(([k, l, ic]) => (
+          <Pressable key={k} onPress={() => setMode(k)} className={`flex-1 flex-row items-center justify-center gap-2 py-3 rounded-full ${mode === k ? 'bg-slate-900' : ''}`}>
+            <Icon name={ic} size={17} color={mode === k ? '#fff' : '#94A3B8'} />
+            <Text className={`text-sm ${mode === k ? 'text-white font-bold' : 'text-slate-500'}`}>{l}</Text>
+          </Pressable>
+        ))}
       </View>
 
       {mode === 'quick' ? (
-        <View className="flex-row"><Input label="টাকার পরিমাণ" className="text-3xl font-bold py-4" keyboardType="decimal-pad" placeholder="500" value={amount} onChangeText={setAmount} /></View>
+        <Card className="gap-3">
+          <View className="flex-row items-center gap-2">
+            <IconBox name="cash" size={32} tone="brand" />
+            <Text className="text-slate-500 text-sm">টাকার পরিমাণ</Text>
+          </View>
+          <View className="flex-row items-center">
+            <Text className="text-slate-300 font-bold mr-2" style={{ fontSize: 36, lineHeight: 52 }}>৳</Text>
+            <TextInput
+              value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="0" placeholderTextColor="#CBD5E1" selectionColor="#18A9B7"
+              style={{ flex: 1, fontFamily: FONT.bold, fontSize: 40, height: 64, padding: 0, color: '#0F172A' }}
+            />
+          </View>
+          <View className="flex-row gap-2">
+            {QUICK.map((v) => (
+              <Pressable key={v} onPress={() => setAmount(String(num(amount) + v))} className="flex-1 items-center py-2 rounded-xl bg-canvas active:bg-brand-50">
+                <Text className="text-sm font-semibold text-slate-600">+{v}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </Card>
       ) : (
         <View className="gap-2.5">
           <View className="flex-row"><Input placeholder="পণ্য খুঁজুন..." value={q} onChangeText={setQ} /></View>
           {found.map((p) => (
-            <Card key={p.id} onPress={() => add(p)} className="flex-row justify-between items-center">
-              <Text className="flex-1 font-semibold">{p.name}</Text><Muted>{taka(p.sellingPrice)}/{p.unit} · স্টক {qtyFmt(p.stock)}</Muted>
+            <Card key={p.id} onPress={() => add(p)} className="flex-row items-center gap-3">
+              <IconBox name="cube-outline" size={40} tone="brand" />
+              <View className="flex-1"><Text className="font-semibold">{p.name}</Text><Muted>স্টক {qtyFmt(p.stock)} {p.unit}</Muted></View>
+              <Text className="font-bold text-brand-700">{taka(p.sellingPrice)}</Text>
             </Card>
           ))}
           {ps.length === 0 && <Notice kind="info">আগে “মাল” থেকে পণ্য যোগ করুন — অথবা “দ্রুত বিক্রি” ব্যবহার করুন।</Notice>}
           {cart.map((l) => (
-            <Card key={l.productId} className="gap-2">
-              <View className="flex-row justify-between"><Text className="font-semibold flex-1">{l.name}</Text><Text className="font-bold">{taka(num(l.qty) * l.price)}</Text></View>
+            <Card key={l.productId} className="gap-3">
+              <View className="flex-row justify-between items-center">
+                <Text className="font-semibold flex-1">{l.name}</Text>
+                <Text className="font-bold text-base">{taka(num(l.qty) * l.price)}</Text>
+              </View>
               <View className="flex-row items-center gap-2">
-                <Pressable onPress={() => bump(l.productId, -1)} className="w-11 h-11 rounded-xl bg-slate-100 items-center justify-center active:bg-slate-200"><Icon name="remove" /></Pressable>
+                <Pressable onPress={() => bump(l.productId, -1)} className="w-11 h-11 rounded-full bg-canvas items-center justify-center active:bg-slate-200"><Icon name="remove" /></Pressable>
                 <View className="w-24"><Input className="text-center py-2" keyboardType="decimal-pad" value={l.qty} onChangeText={(v) => setQty(l.productId, v)} /></View>
-                <Pressable onPress={() => bump(l.productId, 1)} className="w-11 h-11 rounded-xl bg-brand-50 items-center justify-center active:bg-brand-100"><Icon name="add" color="#047857" /></Pressable>
+                <Pressable onPress={() => bump(l.productId, 1)} className="w-11 h-11 rounded-full bg-slate-900 items-center justify-center active:bg-black"><Icon name="add" color="#fff" /></Pressable>
                 <Muted className="flex-1 text-right">{taka(l.price)} প্রতি</Muted>
               </View>
             </Card>
           ))}
-          {cart.length > 0 && <Text className="text-right text-xl font-bold">মোট: {taka(total)}</Text>}
         </View>
       )}
 
-      <View><Label>পেমেন্ট</Label><Chips>{PAY.map(([k, v]) => <Chip key={k} label={v} on={pay === k} onPress={() => setPay(k)} />)}</Chips></View>
+      {/* ---------- পেমেন্ট ---------- */}
+      <View>
+        <Label>পেমেন্ট কীভাবে?</Label>
+        <View className="flex-row flex-wrap gap-2.5">
+          {PAY.map(([k, v, ic]) => {
+            const on = pay === k;
+            return (
+              <Pressable key={k} onPress={() => setPay(k)} style={{ width: '48%' }} className={`flex-row items-center gap-2.5 p-3 rounded-2xl border ${on ? 'bg-brand-50 border-brand-600' : 'bg-white border-line'}`}>
+                <IconBox name={ic} size={34} tone={on ? 'brand' : 'slate'} />
+                <Text className={`flex-1 text-sm ${on ? 'font-bold text-brand-800' : 'text-slate-700'}`} numberOfLines={1}>{v}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
       {pay === 'PART' && (
         <View>
           <View className="flex-row"><Input label="এখন কত টাকা নগদ নিলেন?" keyboardType="decimal-pad" value={paid} onChangeText={setPaid} /></View>
-          {total > 0 && <Text className="text-amber-600 mt-1">বাকি থাকবে: {taka(total - num(paid))}</Text>}
+          {total > 0 && <Text className="text-amber-600 mt-1 text-sm">বাকি থাকবে: {taka(total - num(paid))}</Text>}
         </View>
       )}
       {needCustomer && (
@@ -105,17 +150,36 @@ export default function Sale() {
       )}
 
       <Notice kind="err">{err}</Notice><Notice kind="ok">{msg}</Notice>
-      <Btn title="বিক্রি যোগ করুন" icon="checkmark" loading={busy} onPress={submit} />
 
-      <H2>আজকের বিক্রির তালিকা</H2>
-      <View className="gap-2">
-        {(data?.sales ?? []).map((s: any) => (
-          <Card key={s.id} className="flex-row justify-between items-center">
-            <View><Text className="font-bold text-lg">{taka(s.total)}</Text><Muted>{s.customerName || 'সাধারণ'} · {timeOf(s.createdAt)}</Muted></View>
-            <View className="items-end gap-1">{s.dueAmount > 0 && <Badge tone="amber" label={`বাকি ${taka(s.dueAmount)}`} />}{s.bkashAmount > 0 && <Badge tone="red" label="বিকাশ" />}</View>
-          </Card>
-        ))}
-        {data && data.sales.length === 0 && <Empty text="আজ এখনো কোনো বিক্রি নেই" />}
+      {/* ---------- মোট + বাটন ---------- */}
+      <Card className="gap-3">
+        <View className="flex-row justify-between items-center">
+          <Text className="text-slate-500">মোট বিক্রি</Text>
+          <Text className="text-2xl font-bold">{taka(total)}</Text>
+        </View>
+        <Btn title="বিক্রি যোগ করুন" icon="checkmark" variant="dark" loading={busy} onPress={submit} />
+      </Card>
+
+      {/* ---------- আজকের তালিকা ---------- */}
+      <View>
+        <SectionHead title="আজকের বিক্রির তালিকা" />
+        <View className="gap-2.5">
+          {list.map((s: any) => (
+            <Card key={s.id} className="flex-row items-center gap-3">
+              <IconBox name="receipt-outline" size={40} tone="slate" />
+              <View className="flex-1">
+                <Text className="font-bold text-base">{taka(s.total)}</Text>
+                <Muted>{s.customerName || 'সাধারণ'} · {timeOf(s.createdAt)}</Muted>
+              </View>
+              <View className="items-end gap-1">
+                {s.dueAmount > 0 && <Badge tone="amber" label={`বাকি ${taka(s.dueAmount)}`} />}
+                {s.bkashAmount > 0 && <Badge tone="red" label="বিকাশ" />}
+              </View>
+            </Card>
+          ))}
+          {data && list.length === 0 && <Empty text="আজ এখনো কোনো বিক্রি নেই" icon="receipt-outline" />}
+          {list.length > 0 && <Text className="text-right text-sm text-slate-500">আজ মোট {taka(todayTotal)}</Text>}
+        </View>
       </View>
     </Page>
   );

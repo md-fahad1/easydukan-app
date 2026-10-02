@@ -1,7 +1,7 @@
 import { Link } from 'expo-router';
 import React, { useState } from 'react';
-import { View } from 'react-native';
-import { Btn, Card, Empty, errMsg, H1, Input, Muted, Notice, Page, Text, useLoad } from '@/components/ui';
+import { Pressable, View } from 'react-native';
+import { Avatar, Btn, Card, Empty, errMsg, Icon, IconBox, Input, Muted, Notice, Page, SectionHead, Text, useLoad } from '@/components/ui';
 import { taka } from '@/lib/format';
 import { createCustomer, customers } from '@/services/shop';
 import { useSession } from '@/store/session';
@@ -13,6 +13,7 @@ export default function Baki() {
   const [show, setShow] = useState(false); const [e2, setE2] = useState('');
   const list = data ?? [];
   const total = list.reduce((a, c) => a + c.balance, 0);
+  const dueCount = list.filter((c) => c.balance > 0).length;
   const shown = list.filter((c) => c.name.toLowerCase().includes(q.toLowerCase()) || (c.phone || '').includes(q));
   const add = async () => {
     setE2('');
@@ -20,12 +21,31 @@ export default function Baki() {
   };
   return (
     <Page onRefresh={reload}>
-      <H1>বাকির খাতা</H1>
-      <Card className="bg-amber-50 border-amber-200"><Text className="text-slate-600">মোট পাবেন</Text><Text className="text-3xl font-bold text-amber-700">{taka(total)}</Text></Card>
-      <View className="flex-row"><Input placeholder="নাম বা মোবাইল দিয়ে খুঁজুন" value={q} onChangeText={setQ} /></View>
-      <Btn title={show ? 'বন্ধ করুন' : 'নতুন কাস্টমার'} icon={show ? 'close' : 'person-add'} variant="outline" small onPress={() => setShow(!show)} />
+      {/* ---------- মোট পাবেন ---------- */}
+      <Card className="gap-3">
+        <View className="flex-row items-center gap-3">
+          <IconBox name="book" size={42} tone="amber" />
+          <View className="flex-1">
+            <Text className="text-slate-500 text-xs">মোট পাবেন (বাকির খাতা)</Text>
+            <Text className="text-3xl font-bold text-amber-600" style={{ lineHeight: 46 }}>{taka(total)}</Text>
+          </View>
+        </View>
+        <View className="flex-row items-center gap-2 pt-3 border-t border-line">
+          <Icon name="people" size={16} color="#94A3B8" />
+          <Text className="text-sm text-slate-500">{dueCount} জনের কাছে বাকি আছে · মোট {list.length} জন কাস্টমার</Text>
+        </View>
+      </Card>
+
+      {/* ---------- খোঁজা + নতুন কাস্টমার ---------- */}
+      <View className="flex-row items-center gap-2.5">
+        <Input placeholder="নাম বা মোবাইল দিয়ে খুঁজুন" value={q} onChangeText={setQ} />
+        <Pressable onPress={() => setShow(!show)} className="w-[52px] h-[52px] rounded-full bg-slate-900 items-center justify-center active:bg-black">
+          <Icon name={show ? 'close' : 'person-add'} size={22} color="#fff" />
+        </Pressable>
+      </View>
       {show && (
         <Card className="gap-3">
+          <Text className="font-bold">নতুন কাস্টমার</Text>
           <View className="flex-row"><Input placeholder="নাম" value={name} onChangeText={setName} /></View>
           <View className="flex-row"><Input placeholder="মোবাইল (ঐচ্ছিক)" keyboardType="number-pad" value={phone} onChangeText={setPhone} /></View>
           <Notice kind="err">{e2}</Notice>
@@ -33,16 +53,28 @@ export default function Baki() {
         </Card>
       )}
       <Notice kind="err">{err}</Notice>
-      <View className="gap-2">
-        {shown.map((c) => (
-          <Link key={c.id} href={employee ? '/sale' : { pathname: '/baki/[id]', params: { id: c.id } }} asChild>
-            <Card onPress={() => {}} className="flex-row justify-between items-center">
-              <View><Text className="font-bold text-lg">{c.name}</Text><Muted>{c.phone}</Muted></View>
-              <Text className={`font-bold text-lg ${c.balance > 0 ? 'text-amber-600' : c.balance < 0 ? 'text-emerald-700' : 'text-slate-400'}`}>{taka(c.balance)}</Text>
-            </Card>
-          </Link>
-        ))}
-        {shown.length === 0 && <Empty text="কোনো কাস্টমার নেই" icon="people-outline" />}
+
+      {/* ---------- কাস্টমার তালিকা ---------- */}
+      <View>
+        <SectionHead title="কাস্টমার" />
+        <View className="gap-2.5">
+          {shown.map((c) => (
+            <Link key={c.id} href={employee ? '/sale' : { pathname: '/baki/[id]', params: { id: c.id } }} asChild>
+              <Card onPress={() => {}} className="flex-row items-center gap-3">
+                <Avatar name={c.name} />
+                <View className="flex-1">
+                  <Text className="font-bold text-base" numberOfLines={1}>{c.name}</Text>
+                  <Muted>{c.phone || 'মোবাইল নেই'}</Muted>
+                </View>
+                <View className="items-end">
+                  <Text className={`font-bold text-base ${c.balance > 0 ? 'text-amber-600' : c.balance < 0 ? 'text-emerald-600' : 'text-slate-400'}`}>{taka(Math.abs(c.balance))}</Text>
+                  <Text className="text-xs text-slate-400">{c.balance > 0 ? 'বাকি' : c.balance < 0 ? 'জমা' : 'পরিষ্কার'}</Text>
+                </View>
+              </Card>
+            </Link>
+          ))}
+          {shown.length === 0 && <Empty text="কোনো কাস্টমার নেই" icon="people-outline" />}
+        </View>
       </View>
     </Page>
   );

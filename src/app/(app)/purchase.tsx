@@ -1,11 +1,13 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { View } from 'react-native';
-import { Btn, Card, Chip, Chips, errMsg, H1, Input, Label, Notice, Page, Pick, Text, useLoad } from '@/components/ui';
+import { Pressable, View } from 'react-native';
+import { Btn, Card, errMsg, Icon, IconBox, IconName, Input, Label, Notice, Page, Pick, Text, useLoad } from '@/components/ui';
 import { num, taka } from '@/lib/format';
 import { createPurchase, products, suppliers } from '@/services/shop';
 
 type Line = { productId: string; name: string; qty: string; cost: string };
+const PAY: [string, string, IconName][] = [['FULL', 'পুরো টাকা', 'cash'], ['PART', 'কিছু টাকা', 'git-compare'], ['DUE', 'বাকিতে', 'time']];
+
 export default function Purchase() {
   const router = useRouter();
   const { data } = useLoad(async () => ({ s: await suppliers(), p: await products() }));
@@ -33,21 +35,48 @@ export default function Purchase() {
   };
   return (
     <Page>
-      <H1>মাল কেনা</H1>
-      <View className="flex-row"><Pick label="কোথা থেকে?" value={supplierId} onChange={setSupplierId} placeholder="মালদাতা বেছে নিন" noneLabel="— মালদাতা ছাড়া —" options={(data?.s ?? []).map((s) => ({ value: s.id, label: s.name, sub: `দিতে হবে ${taka(s.balance)}` }))} /></View>
-      <View className="flex-row"><Pick label="পণ্য (স্টকে যোগ হবে)" value="" onChange={addLine} placeholder="+ পণ্য যোগ করুন" options={(data?.p ?? []).map((p) => ({ value: p.id, label: p.name }))} /></View>
+      <Card className="gap-3">
+        <View className="flex-row"><Pick label="কোথা থেকে?" value={supplierId} onChange={setSupplierId} placeholder="মালদাতা বেছে নিন" noneLabel="— মালদাতা ছাড়া —" options={(data?.s ?? []).map((s) => ({ value: s.id, label: s.name, sub: `দিতে হবে ${taka(s.balance)}` }))} /></View>
+        <View className="flex-row"><Pick label="পণ্য (স্টকে যোগ হবে)" value="" onChange={addLine} placeholder="+ পণ্য যোগ করুন" options={(data?.p ?? []).map((p) => ({ value: p.id, label: p.name }))} /></View>
+      </Card>
+
       {lines.map((l) => (
-        <Card key={l.productId} className="gap-2">
-          <Text className="font-bold">{l.name}</Text>
+        <Card key={l.productId} className="gap-3">
+          <View className="flex-row items-center gap-3">
+            <IconBox name="cube-outline" size={38} tone="brand" />
+            <Text className="font-bold flex-1" numberOfLines={1}>{l.name}</Text>
+            <Text className="font-bold text-brand-700">{taka(num(l.qty) * num(l.cost))}</Text>
+            <Pressable hitSlop={8} onPress={() => setLines(lines.filter((x) => x.productId !== l.productId))} className="active:opacity-50"><Icon name="close-circle" size={22} color="#CBD5E1" /></Pressable>
+          </View>
           <View className="flex-row gap-3"><Input label="পরিমাণ" keyboardType="decimal-pad" value={l.qty} onChangeText={(v) => upd(l.productId, 'qty', v)} /><Input label="কেনা দাম" keyboardType="decimal-pad" value={l.cost} onChangeText={(v) => upd(l.productId, 'cost', v)} /></View>
         </Card>
       ))}
       {lines.length === 0 && <View className="flex-row"><Input label="অথবা শুধু মোট টাকা লিখুন" keyboardType="decimal-pad" placeholder="12500" value={manual} onChangeText={setManual} /></View>}
-      <Text className="text-right text-xl font-bold">মোট: {taka(total)}</Text>
-      <View><Label>পেমেন্ট</Label><Chips>{[['FULL', 'পুরো টাকা'], ['PART', 'কিছু টাকা'], ['DUE', 'বাকিতে']].map(([k, v]) => <Chip key={k} label={v} on={pay === k} onPress={() => setPay(k)} />)}</Chips></View>
+
+      <View>
+        <Label>পেমেন্ট</Label>
+        <View className="flex-row gap-2.5">
+          {PAY.map(([k, v, ic]) => {
+            const on = pay === k;
+            return (
+              <Pressable key={k} onPress={() => setPay(k)} className={`flex-1 items-center gap-2 py-3 rounded-2xl border ${on ? 'bg-brand-50 border-brand-600' : 'bg-white border-line'}`}>
+                <IconBox name={ic} size={34} tone={on ? 'brand' : 'slate'} />
+                <Text className={`text-xs ${on ? 'font-bold text-brand-800' : 'text-slate-700'}`}>{v}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
       {pay === 'PART' && <View className="flex-row"><Input placeholder="এখন কত টাকা দিলেন?" keyboardType="decimal-pad" value={paid} onChangeText={setPaid} /></View>}
       <Notice kind="err">{err}</Notice>
-      <Btn title="মাল কেনা যোগ করুন" icon="checkmark" loading={busy} onPress={submit} />
+
+      <Card className="gap-3">
+        <View className="flex-row justify-between items-center">
+          <Text className="text-slate-500">মোট</Text>
+          <Text className="text-2xl font-bold">{taka(total)}</Text>
+        </View>
+        <Btn title="মাল কেনা যোগ করুন" icon="checkmark" variant="dark" loading={busy} onPress={submit} />
+      </Card>
     </Page>
   );
 }

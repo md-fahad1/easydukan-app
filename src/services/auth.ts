@@ -45,9 +45,8 @@ export const login = (phone: string, password: string) =>
 export const restoreSession = () =>
   read(async (x) => {
     const id = await getMeta(x, 'session');
-    if (!id) return null;
-    const u = await x.first<any>('SELECT * FROM users WHERE id=?', [id]);
-    if (!u) return null;
+   const u = id ? await x.first<any>('SELECT * FROM users WHERE id=?', [id]) : null;
+    if (!u) { setCurrent(null); return null; } 
     const me = pub(u);
     setCurrent(me);
     return me;

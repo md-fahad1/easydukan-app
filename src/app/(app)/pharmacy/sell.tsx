@@ -1,14 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import BarcodeScanner from '@/components/BarcodeScanner';
-import { Badge, Btn, Card, Chip, Chips, Empty, errMsg, H1, H2, Icon, Input, Label, Muted, Notice, Page, Pick, Text, useLoad } from '@/components/ui';
+import { Badge, Btn, Card, Chip, Chips, Empty, errMsg, Icon, IconBox, IconName, Input, Label, Muted, Notice, Page, Pick, SectionHead, Text, useLoad } from '@/components/ui';
 import { num, taka, timeOf } from '@/lib/format';
 import { fmtStock, r2, unitFactor, unitsFor } from '@/lib/pharma';
 import { pharmacySale } from '@/services/pharmacy';
 import { createCustomer, customers, products, sales } from '@/services/shop';
 
 type Line = { p: any; unit: string; qty: string; price: string };
-const PAY: [string, string][] = [['CASH', 'নগদ'], ['BKASH', 'বিকাশ'], ['PART', 'নগদ + বাকি'], ['DUE', 'পুরো বাকি']];
+const PAY: [string, string, IconName][] = [['CASH', 'নগদ', 'cash'], ['BKASH', 'বিকাশ', 'phone-portrait'], ['PART', 'নগদ + বাকি', 'git-compare'], ['DUE', 'পুরো বাকি', 'time']];
 
 export default function PharmaSell() {
   const { data, reload } = useLoad(async () => ({ p: await products(), c: await customers(), s: await sales('TODAY') }));
@@ -53,36 +53,59 @@ export default function PharmaSell() {
     setBusy(false);
   };
 
+  const list = data?.s ?? [];
   return (
     <Page>
       {scan && <BarcodeScanner onScan={onScan} onClose={() => setScan(false)} />}
-      <H1>ওষুধ বিক্রি</H1>
-      <View className="flex-row gap-2 items-end">
+
+      {/* ---------- খোঁজা + স্ক্যান ---------- */}
+      <View className="flex-row gap-2.5 items-center">
         <Input placeholder="নাম / জেনেরিক / বারকোড" value={q} onChangeText={setQ} onSubmitEditing={onSubmitEditing} returnKeyType="search" />
-        <Pressable onPress={() => setScan(true)} className="w-14 h-[54px] rounded-xl bg-brand-600 items-center justify-center active:bg-brand-700"><Icon name="barcode-outline" size={28} color="#fff" /></Pressable>
+        <Pressable onPress={() => setScan(true)} className="w-[52px] h-[52px] rounded-full bg-slate-900 items-center justify-center active:bg-black"><Icon name="barcode-outline" size={26} color="#fff" /></Pressable>
       </View>
       {found.map((p) => (
-        <Card key={p.id} onPress={() => add(p)} className="gap-0.5">
-          <View className="flex-row justify-between"><Text className="font-bold flex-1">{p.name}</Text><Muted>স্টক {fmtStock(p.stock, p)}</Muted></View>
-          <Muted>{[p.genericName, p.company].filter(Boolean).join(' · ')}</Muted>
-          <Text className="text-sm text-slate-600">{unitsFor(p).map(([k, l]) => `${l} ${taka(r2(p.sellingPrice * unitFactor(p, k)))}`).join(' · ')}</Text>
+        <Card key={p.id} onPress={() => add(p)} className="flex-row items-center gap-3">
+          <IconBox name="medkit-outline" size={40} tone="brand" />
+          <View className="flex-1 gap-0.5">
+            <Text className="font-bold">{p.name}</Text>
+            <Muted>{[p.genericName, p.company].filter(Boolean).join(' · ') || '—'}</Muted>
+            <Text className="text-xs text-slate-500">{unitsFor(p).map(([k, l]) => `${l} ${taka(r2(p.sellingPrice * unitFactor(p, k)))}`).join(' · ')}</Text>
+          </View>
+          <Muted>স্টক {fmtStock(p.stock, p)}</Muted>
         </Card>
       ))}
       {q && found.length === 0 && <Muted>কোনো ওষুধ পাওয়া যায়নি</Muted>}
 
+      {/* ---------- কার্ট ---------- */}
       {cart.map((l, i) => (
-        <Card key={i} className="gap-2">
-          <View className="flex-row justify-between items-center"><Text className="font-bold flex-1">{l.p.name}</Text><Pressable onPress={() => setCart(cart.filter((_, k) => k !== i))} className="p-1"><Icon name="close-circle" color="#F43F5E" /></Pressable></View>
-          <Muted>স্টক: {fmtStock(l.p.stock, l.p)}</Muted>
+        <Card key={i} className="gap-3">
+          <View className="flex-row items-center gap-3">
+            <IconBox name="medkit" size={38} tone="brand" />
+            <View className="flex-1"><Text className="font-bold" numberOfLines={1}>{l.p.name}</Text><Muted>স্টক: {fmtStock(l.p.stock, l.p)}</Muted></View>
+            <Pressable onPress={() => setCart(cart.filter((_, k) => k !== i))} hitSlop={8} className="active:opacity-50"><Icon name="close-circle" size={24} color="#CBD5E1" /></Pressable>
+          </View>
           <Chips>{unitsFor(l.p).map(([k, v]) => <Chip key={k} label={v} on={l.unit === k} onPress={() => setUnit(i, k)} />)}</Chips>
           <View className="flex-row gap-3"><Input label="পরিমাণ" keyboardType="decimal-pad" value={l.qty} onChangeText={(v) => upd(i, { qty: v })} /><Input label="দাম (প্রতি ইউনিট)" keyboardType="decimal-pad" value={l.price} onChangeText={(v) => upd(i, { price: v })} /></View>
-          <Text className="text-right font-bold">{taka(num(l.qty) * num(l.price))}</Text>
+          <Text className="text-right font-bold text-brand-700">{taka(num(l.qty) * num(l.price))}</Text>
         </Card>
       ))}
-      {cart.length > 0 && <Text className="text-right text-2xl font-bold">মোট: {taka(total)}</Text>}
 
-      <View><Label>পেমেন্ট</Label><Chips>{PAY.map(([k, v]) => <Chip key={k} label={v} on={pay === k} onPress={() => setPay(k)} />)}</Chips></View>
-      {pay === 'PART' && (<View><View className="flex-row"><Input label="এখন কত টাকা নগদ নিলেন?" keyboardType="decimal-pad" value={paid} onChangeText={setPaid} /></View>{total > 0 && <Text className="text-amber-600 mt-1">বাকি থাকবে: {taka(total - num(paid))}</Text>}</View>)}
+      {/* ---------- পেমেন্ট ---------- */}
+      <View>
+        <Label>পেমেন্ট কীভাবে?</Label>
+        <View className="flex-row flex-wrap gap-2.5">
+          {PAY.map(([k, v, ic]) => {
+            const on = pay === k;
+            return (
+              <Pressable key={k} onPress={() => setPay(k)} style={{ width: '48%' }} className={`flex-row items-center gap-2.5 p-3 rounded-2xl border ${on ? 'bg-brand-50 border-brand-600' : 'bg-white border-line'}`}>
+                <IconBox name={ic} size={34} tone={on ? 'brand' : 'slate'} />
+                <Text className={`flex-1 text-sm ${on ? 'font-bold text-brand-800' : 'text-slate-700'}`} numberOfLines={1}>{v}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+      {pay === 'PART' && (<View><View className="flex-row"><Input label="এখন কত টাকা নগদ নিলেন?" keyboardType="decimal-pad" value={paid} onChangeText={setPaid} /></View>{total > 0 && <Text className="text-amber-600 mt-1 text-sm">বাকি থাকবে: {taka(total - num(paid))}</Text>}</View>)}
       {needCustomer && (
         <View className="gap-2.5">
           <View className="flex-row"><Pick label="কার নামে বাকি?" value={customerId} onChange={setCustomerId} placeholder="কাস্টমার বেছে নিন" options={(data?.c ?? []).map((c) => ({ value: c.id, label: c.name, sub: `বাকি ${taka(c.balance)}` }))} /></View>
@@ -90,17 +113,25 @@ export default function PharmaSell() {
         </View>
       )}
       <Notice kind="err">{err}</Notice><Notice kind="ok">{msg}</Notice>
-      <Btn title="বিক্রি যোগ করুন" icon="checkmark" loading={busy} onPress={submit} />
 
-      <H2>আজকের বিক্রি</H2>
-      <View className="gap-2">
-        {(data?.s ?? []).map((s: any) => (
-          <Card key={s.id} className="flex-row justify-between items-center">
-            <View><Text className="font-bold text-lg">{taka(s.total)}</Text><Muted>{s.customerName || 'সাধারণ'} · {timeOf(s.createdAt)}</Muted></View>
-            <View className="items-end gap-1">{s.dueAmount > 0 && <Badge tone="amber" label={`বাকি ${taka(s.dueAmount)}`} />}{s.bkashAmount > 0 && <Badge tone="red" label="বিকাশ" />}</View>
-          </Card>
-        ))}
-        {data && data.s.length === 0 && <Empty text="আজ এখনো কোনো বিক্রি নেই" />}
+      <Card className="gap-3">
+        <View className="flex-row justify-between items-center"><Text className="text-slate-500">মোট বিক্রি</Text><Text className="text-2xl font-bold">{taka(total)}</Text></View>
+        <Btn title="বিক্রি যোগ করুন" icon="checkmark" variant="dark" loading={busy} onPress={submit} />
+      </Card>
+
+      {/* ---------- আজকের বিক্রি ---------- */}
+      <View>
+        <SectionHead title="আজকের বিক্রি" />
+        <View className="gap-2.5">
+          {list.map((s: any) => (
+            <Card key={s.id} className="flex-row items-center gap-3">
+              <IconBox name="receipt-outline" size={40} tone="slate" />
+              <View className="flex-1"><Text className="font-bold text-base">{taka(s.total)}</Text><Muted>{s.customerName || 'সাধারণ'} · {timeOf(s.createdAt)}</Muted></View>
+              <View className="items-end gap-1">{s.dueAmount > 0 && <Badge tone="amber" label={`বাকি ${taka(s.dueAmount)}`} />}{s.bkashAmount > 0 && <Badge tone="red" label="বিকাশ" />}</View>
+            </Card>
+          ))}
+          {data && list.length === 0 && <Empty text="আজ এখনো কোনো বিক্রি নেই" icon="receipt-outline" />}
+        </View>
       </View>
     </Page>
   );

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
-import { Badge, Btn, Card, Chip, confirm, Empty, errMsg, H1, Input, Muted, Notice, Page, Split, Text, useLoad } from '@/components/ui';
-import { dateFull, taka } from '@/lib/format';
+import { Badge, Btn, Card, Chip, confirm, Empty, errMsg, Icon, IconBox, Input, Muted, Notice, Page, Split, Text, useLoad } from '@/components/ui';
+import { bn, dateFull, taka } from '@/lib/format';
 import { DAY } from '@/lib/dates';
 import { fmtStock } from '@/lib/pharma';
 import { batchStock, discardBatch } from '@/services/pharmacy';
@@ -16,7 +16,13 @@ function tone(d: number | null): { tone: 'gray' | 'red' | 'amber' | 'green'; t: 
   if (d <= SOON) return { tone: 'amber', t: `${d} দিন বাকি` };
   return { tone: 'green', t: `${d} দিন বাকি` };
 }
-import { bn } from '@/lib/format';
+
+const Box = ({ icon, l, v, c = '', bx }: { icon: any; l: string; v: string; c?: string; bx: 'brand' | 'green' | 'red' | 'amber' }) => (
+  <Card className="flex-1 gap-2">
+    <View className="flex-row items-center gap-2"><IconBox name={icon} size={30} tone={bx} /><Text className="text-slate-500 text-xs flex-1" numberOfLines={1}>{l}</Text></View>
+    <Text className={`text-xl font-bold ${c}`}>{v}</Text>
+  </Card>
+);
 
 export default function Batches() {
   const { data, err, reload } = useLoad(() => batchStock());
@@ -53,33 +59,35 @@ export default function Batches() {
     try { await discardBatch(b.id); setOk('ব্যাচ স্টক থেকে বাদ দেওয়া হয়েছে'); await reload(); } catch (e) { setE2(errMsg(e)); }
     setBusy(false);
   };
-  const Box = ({ l, v, c = '', bg = '' }: any) => <Card className={`flex-1 ${bg}`}><Muted>{l}</Muted><Text className={`text-xl font-bold ${c}`}>{v}</Text></Card>;
 
   return (
     <Page onRefresh={reload}>
-      <H1>ব্যাচ অনুযায়ী স্টক</H1>
-      <Split><Box l="স্টকের দাম (কেনা)" v={taka(sum.cost)} /><Box l="স্টকের দাম (বিক্রি)" v={taka(sum.sale)} c="text-emerald-700" /></Split>
-      <Split><Box l="মেয়াদোত্তীর্ণ মাল" v={taka(sum.expiredCost)} c="text-rose-700" bg="bg-rose-50 border-rose-200" /><Box l={`${bn(SOON)} দিনে শেষ`} v={`${bn(sum.soonCount)} ব্যাচ`} c="text-amber-700" bg="bg-amber-50 border-amber-200" /></Split>
+      <Split><Box icon="cash-outline" bx="brand" l="স্টকের দাম (কেনা)" v={taka(sum.cost)} /><Box icon="trending-up" bx="green" l="স্টকের দাম (বিক্রি)" v={taka(sum.sale)} c="text-emerald-600" /></Split>
+      <Split><Box icon="trash-outline" bx="red" l="মেয়াদোত্তীর্ণ মাল" v={taka(sum.expiredCost)} c="text-rose-600" /><Box icon="hourglass-outline" bx="amber" l={`${bn(SOON)} দিনে শেষ`} v={`${bn(sum.soonCount)} ব্যাচ`} c="text-amber-600" /></Split>
+
       <View className="flex-row"><Input placeholder="ওষুধ, কোম্পানি, জেনেরিক বা ব্যাচ নং" value={q} onChangeText={setQ} /></View>
       <View className="flex-row flex-wrap gap-2">{FILTERS.map(([k, l]) => <Chip key={k} label={l} on={filter === k} onPress={() => setFilter(k)} />)}</View>
       <Notice kind="ok">{ok}</Notice><Notice kind="err">{e2 || err}</Notice>
-      <View className="gap-2">
+
+      <View className="gap-2.5">
         {shown.map((p) => (
           <Card key={p.id} className="p-0 overflow-hidden">
-            <Pressable onPress={() => setOpen(open === p.id ? '' : p.id)} className="p-4 flex-row justify-between gap-3 active:bg-slate-50">
+            <Pressable onPress={() => setOpen(open === p.id ? '' : p.id)} className="p-4 flex-row items-center gap-3 active:bg-slate-50">
+              <IconBox name="albums-outline" size={40} tone={p.expiredQty > 0 ? 'red' : p.soonQty > 0 ? 'amber' : 'slate'} />
               <View className="flex-1 gap-1">
                 <Text className="font-bold" numberOfLines={1}>{p.name}</Text><Muted>{[p.company, p.genericName].filter(Boolean).join(' • ') || '—'}</Muted>
                 <View className="flex-row flex-wrap gap-1">{p.expiredQty > 0 && <Badge tone="red" label="মেয়াদোত্তীর্ণ" />}{p.soonQty > 0 && <Badge tone="amber" label="মেয়াদ কাছে" />}{p.low && <Badge tone="orange" label="কম স্টক" />}</View>
               </View>
               <View className="items-end"><Text className="font-bold">{fmtStock(p.stock, p)}</Text><Muted>{bn(p.bs.length)} ব্যাচ</Muted></View>
+              <Icon name={open === p.id ? 'chevron-up' : 'chevron-down'} size={16} color="#CBD5E1" />
             </Pressable>
             {open === p.id && (
-              <View className="border-t border-line bg-slate-50 p-3 gap-2">
+              <View className="border-t border-line bg-canvas p-3 gap-2.5">
                 {p.bs.map((b) => {
                   const t = tone(b.d);
                   return (
-                    <View key={b.id} className="bg-white rounded-xl border border-line p-3 gap-2">
-                      <View className="flex-row justify-between"><Text className="font-semibold">ব্যাচ: {b.batchNo || '—'}</Text><Badge tone={t.tone} label={t.t} /></View>
+                    <View key={b.id} className="bg-white rounded-2xl border border-line p-3 gap-2">
+                      <View className="flex-row justify-between items-center"><Text className="font-semibold">ব্যাচ: {b.batchNo || '—'}</Text><Badge tone={t.tone} label={t.t} /></View>
                       <View className="flex-row justify-between"><Muted>মেয়াদ</Muted><Text className="text-sm">{b.expiry ? dateFull(b.expiry) : '—'}</Text></View>
                       <View className="flex-row justify-between"><Muted>পরিমাণ</Muted><Text className="text-sm font-bold">{fmtStock(b.qty, p)}</Text></View>
                       <View className="flex-row justify-between"><Muted>কেনা দামে মোট</Muted><Text className="text-sm">{taka(b.qty * b.cost)}</Text></View>
@@ -94,7 +102,7 @@ export default function Batches() {
             )}
           </Card>
         ))}
-        {data && shown.length === 0 && <Empty text="কিছু পাওয়া যায়নি" />}
+        {data && shown.length === 0 && <Empty text="কিছু পাওয়া যায়নি" icon="albums-outline" />}
       </View>
     </Page>
   );

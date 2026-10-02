@@ -8,10 +8,9 @@ import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui';
-import { openDb } from '@/db/client';
+import { bootDb, getActiveId, isPending, listShopsNow } from '@/db/client';
 import { getShop, restoreSession } from '@/services/auth';
-import { SessionProvider } from '@/store/session';
-import type { Shop, User } from '@/types';
+import { Boot, SessionProvider, useSession } from '@/store/session';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -21,15 +20,15 @@ export default function Root() {
     HindSiliguriBold: require('@expo-google-fonts/hind-siliguri/700Bold/HindSiliguri_700Bold.ttf'),
     ...Ionicons.font,
   });
-  const [boot, setBoot] = useState<{ user: User | null; shop: Shop | null } | null>(null);
+  const [boot, setBoot] = useState<Boot | null>(null);
   const [fatal, setFatal] = useState('');
 
   useEffect(() => {
     (async () => {
       try {
-        await openDb();
+        await bootDb();
         const user = await restoreSession();
-        setBoot({ user, shop: await getShop() });
+        setBoot({ user, shop: await getShop(), shops: await listShopsNow(), activeId: getActiveId(), pending: isPending() });
       } catch (e: any) { setFatal(e?.message || 'ডাটাবেস চালু করা যায়নি'); }
     })();
   }, []);
@@ -41,10 +40,19 @@ export default function Root() {
 
   return (
     <SafeAreaProvider>
-      <SessionProvider initialUser={boot.user} initialShop={boot.shop}>
-        <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false, animation: 'fade' }} />
+      <SessionProvider initial={boot}>
+        <Shell />
       </SessionProvider>
     </SafeAreaProvider>
+  );
+}
+
+function Shell() {
+  const { epoch } = useSession();
+  return (
+    <>
+      <StatusBar style="light" />
+      <Stack key={epoch} screenOptions={{ headerShown: false, animation: 'fade' }} />
+    </>
   );
 }

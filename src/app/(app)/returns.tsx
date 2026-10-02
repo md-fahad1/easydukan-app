@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
-import { Btn, Card, Chip, confirm, Empty, errMsg, H1, Icon, Input, Muted, Notice, Page, Text, useLoad } from '@/components/ui';
+import { Btn, Card, Chip, confirm, Empty, errMsg, Icon, IconBox, Input, Muted, Notice, Page, Segment, Text, useLoad } from '@/components/ui';
 import { dateOf, num, qtyFmt, taka, timeOf } from '@/lib/format';
 import { r2, UNIT_BN } from '@/lib/pharma';
 import { createSaleReturn, returnableSales, saleReturnsHistory } from '@/services/returns';
@@ -38,9 +38,8 @@ export default function Returns() {
 
   return (
     <Page onRefresh={reload}>
-      <H1>বিক্রি ফেরত</H1>
-      <View className="flex-row gap-2"><Chip className="flex-1 items-center" label="নতুন ফেরত" on={tab === 'new'} onPress={() => setTab('new')} /><Chip className="flex-1 items-center" label="ফেরতের তালিকা" on={tab === 'list'} onPress={() => setTab('list')} /></View>
-      <View className="flex-row gap-2">{DAYS.map(([d, l]) => <Chip key={d} className="flex-1 items-center" label={l} on={days === d} onPress={() => setDays(d)} />)}</View>
+      <Segment value={tab} onChange={setTab} options={[['new', 'নতুন ফেরত'], ['list', 'ফেরতের তালিকা']]} />
+      <Segment small value={days} onChange={setDays} options={DAYS} />
       <Notice kind="ok">{ok}</Notice><Notice kind="err">{err}</Notice>
 
       {tab === 'new' && (
@@ -49,20 +48,21 @@ export default function Returns() {
           <View className="gap-2">
             {shown.map((s) => (
               <Card key={s.id} className="p-0 overflow-hidden">
-                <Pressable onPress={() => pick(s.id)} className="p-4 flex-row justify-between gap-3 active:bg-slate-50">
+                <Pressable onPress={() => pick(s.id)} className="p-4 flex-row items-center gap-3 active:bg-slate-50">
+                  <IconBox name="receipt-outline" size={40} tone={open === s.id ? 'brand' : 'slate'} />
                   <View className="flex-1"><Text className="font-bold" numberOfLines={1}>{s.customerName || 'নগদ কাস্টমার'}</Text><Muted>{dateOf(s.createdAt)} • {timeOf(s.createdAt)}</Muted><Muted>{s.items.map((i) => i.name).join(', ')}</Muted></View>
                   <View className="items-end"><Text className="font-bold">{taka(s.total)}</Text>{s.returnedTotal > 0 && <Text className="text-xs text-rose-500">ফেরত {taka(s.returnedTotal)}</Text>}</View>
                 </Pressable>
                 {open === s.id && (
-                  <View className="border-t border-line bg-slate-50 p-4 gap-3">
+                  <View className="border-t border-line bg-canvas p-4 gap-3">
                     {s.items.filter((i) => left(i) > 0).map((i) => (
                       <View key={i.id} className="bg-white rounded-xl border border-line p-3 gap-2">
                         <View className="flex-row justify-between"><Text className="font-semibold flex-1">{i.name}</Text><Muted>{taka(i.price)} / {unitOf(i.unit) || 'একক'}</Muted></View>
                         <Muted>ফেরত দেওয়া যাবে: {qtyFmt(left(i))} {unitOf(i.unit)}</Muted>
                         <View className="flex-row items-center gap-2">
-                          <Pressable className="w-11 h-11 rounded-xl bg-slate-100 items-center justify-center" onPress={() => setItem(i, num(qty[i.id]) - 1)}><Icon name="remove" /></Pressable>
+                          <Pressable className="w-11 h-11 rounded-full bg-canvas items-center justify-center active:bg-slate-200" onPress={() => setItem(i, num(qty[i.id]) - 1)}><Icon name="remove" /></Pressable>
                           <View className="flex-1"><Input className="text-center py-2" keyboardType="decimal-pad" placeholder="0" value={qty[i.id] || ''} onChangeText={(v) => setItem(i, num(v))} /></View>
-                          <Pressable className="w-11 h-11 rounded-xl bg-brand-50 items-center justify-center" onPress={() => setItem(i, num(qty[i.id]) + 1)}><Icon name="add" color="#047857" /></Pressable>
+                          <Pressable className="w-11 h-11 rounded-full bg-slate-900 items-center justify-center active:bg-black" onPress={() => setItem(i, num(qty[i.id]) + 1)}><Icon name="add" color="#fff" /></Pressable>
                           <Btn title="সব" variant="soft" small onPress={() => setItem(i, left(i))} />
                         </View>
                       </View>
@@ -77,7 +77,7 @@ export default function Returns() {
                     {refund > 0 && <View className="flex-row gap-2"><Chip label="নগদ দিলাম" on={method === 'CASH'} onPress={() => setMethod('CASH')} /><Chip label="বিকাশে দিলাম" on={method === 'BKASH'} onPress={() => setMethod('BKASH')} /></View>}
                     <View className="flex-row"><Input placeholder="কারণ (ঐচ্ছিক) — যেমন: ভুল ওষুধ" value={note} onChangeText={setNote} /></View>
                     <Notice kind="err">{e2}</Notice>
-                    <Btn title={`${taka(total)} ফেরত নিন`} icon="return-down-back" disabled={total <= 0} loading={busy} onPress={submit} />
+                    <Btn title={`${taka(total)} ফেরত নিন`} icon="return-down-back" variant="dark" disabled={total <= 0} loading={busy} onPress={submit} />
                   </View>
                 )}
               </Card>

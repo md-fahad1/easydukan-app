@@ -10,6 +10,9 @@ export const FONT = { reg: 'HindSiliguri', bold: 'HindSiliguriBold' };
 export type IconName = React.ComponentProps<typeof Ionicons>['name'];
 export const Icon = ({ name, size = 22, color = '#0F172A' }: { name: IconName; size?: number; color?: string }) => <Ionicons name={name} size={size} color={color} />;
 
+// নরম ছায়া — সব কার্ডে একই
+export const SHADOW = { shadowColor: '#0F172A', shadowOpacity: 0.06, shadowRadius: 14, shadowOffset: { width: 0, height: 4 }, elevation: 2 } as const;
+
 // ---------- লেখা: font-bold / font-semibold লিখলে বাংলা bold ফন্ট ব্যবহার হয় ----------
 const HAS_COLOR = /(^|\s)text-(white|black|transparent|bkash|[a-z]+-\d{2,3})(\s|$)/;
 const isBold = (c: string) => /(^|\s)font-(bold|semibold|extrabold|medium)(\s|$)/.test(c);
@@ -23,8 +26,9 @@ export function Input({ label, hint, className = '', ...p }: TextInputProps & { 
     <View className="flex-1">
       {label ? <Text className="text-sm font-semibold text-slate-600 mb-1.5">{label}</Text> : null}
       <TextInput
-        placeholderTextColor="#94A3B8"
-        className={`bg-white border border-slate-300 rounded-xl px-4 py-3 text-lg text-slate-900 focus:border-brand-600 ${className}`}
+        placeholderTextColor="#9CA3AF"
+        selectionColor="#18A9B7"
+        className={`bg-white border border-line rounded-2xl px-4 py-3.5 text-base text-slate-900 focus:border-brand-600 focus:bg-brand-50 ${className}`}
         style={{ fontFamily: FONT.reg }}
         {...p}
       />
@@ -35,17 +39,80 @@ export function Input({ label, hint, className = '', ...p }: TextInputProps & { 
 
 // ---------- কার্ড ----------
 export function Card({ children, className = '', onPress }: { children: React.ReactNode; className?: string; onPress?: () => void }) {
-  const cls = `bg-white rounded-2xl border border-line p-4 ${className}`;
-  if (onPress) return <Pressable onPress={onPress} className={`${cls} active:opacity-70`}>{children}</Pressable>;
-  return <View className={cls}>{children}</View>;
+  const cls = `bg-white rounded-3xl border border-line p-4 ${className}`;
+  if (onPress) return <Pressable onPress={onPress} style={SHADOW} className={`${cls} active:opacity-70`}>{children}</Pressable>;
+  return <View style={SHADOW} className={cls}>{children}</View>;
+}
+
+// ---------- আইকন বক্স (কার্ডের বাঁয়ে ছোট গোল-কোণা আইকন) ----------
+type BoxTone = 'brand' | 'slate' | 'red' | 'amber' | 'green' | 'dark';
+const BOX: Record<BoxTone, [string, string]> = {
+  brand: ['#E6F7F8', '#0E8F9B'], slate: ['#F1F2F4', '#475569'], red: ['#FFF1F2', '#E11D48'],
+  amber: ['#FFF7E6', '#D97706'], green: ['#E8F8EF', '#16A34A'], dark: ['#0F172A', '#FFFFFF'],
+};
+export function IconBox({ name, size = 36, tone = 'slate' }: { name: IconName; size?: number; tone?: BoxTone }) {
+  const [bg, fg] = BOX[tone];
+  return (
+    <View style={{ width: size, height: size, borderRadius: size * 0.34, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
+      <Icon name={name} size={Math.round(size * 0.55)} color={fg} />
+    </View>
+  );
+}
+
+// নামের প্রথম অক্ষর দিয়ে গোল ছবি (কাস্টমার / কর্মচারী)
+export function Avatar({ name, size = 44 }: { name: string; size?: number }) {
+  const ch = (name || '?').trim().charAt(0);
+  return (
+    <View style={{ width: size, height: size, borderRadius: size * 0.34, backgroundColor: '#E6F7F8', alignItems: 'center', justifyContent: 'center' }}>
+      <Text className="font-bold text-brand-700" style={{ fontSize: size * 0.42, lineHeight: size * 0.62 }}>{ch}</Text>
+    </View>
+  );
+}
+
+// ---------- বাড়া/কমার ছোট চিহ্ন:  ↑ ৫.১%  গত মাসের চেয়ে ----------
+export function Delta({ value, up = true, note }: { value: string; up?: boolean; note?: string }) {
+  const col = up ? '#16A34A' : '#E11D48';
+  return (
+    <View className="flex-row items-center gap-1">
+      <Icon name={up ? 'arrow-up-circle' : 'arrow-down-circle'} size={15} color={col} />
+      <Text className={`text-xs font-bold ${up ? 'text-emerald-600' : 'text-rose-600'}`}>{value}</Text>
+      {note ? <Text className="text-xs text-slate-400">{note}</Text> : null}
+    </View>
+  );
+}
+
+// ---------- প্রগ্রেস বার ----------
+export function Bar({ pct, tone = 'brand' }: { pct: number; tone?: 'brand' | 'green' | 'red' | 'amber' | 'dark' }) {
+  const col = { brand: '#18A9B7', green: '#22C55E', red: '#F87171', amber: '#F59E0B', dark: '#0F172A' }[tone];
+  const w = Math.max(0, Math.min(100, pct || 0));
+  return (
+    <View style={{ height: 10, borderRadius: 5, backgroundColor: '#F1F2F4', overflow: 'hidden' }}>
+      <View style={{ width: `${w}%`, height: 10, borderRadius: 5, backgroundColor: col }} />
+    </View>
+  );
+}
+
+// ---------- কার্ডের মাথার শিরোনাম + ডানে ছোট বাটন ----------
+export function SectionHead({ title, action, onAction }: { title: string; action?: string; onAction?: () => void }) {
+  return (
+    <View className="flex-row items-center justify-between mb-3">
+      <Text className="text-base font-bold">{title}</Text>
+      {action ? (
+        <Pressable onPress={onAction} hitSlop={8} className="px-3 py-1.5 rounded-xl bg-white border border-line active:bg-slate-50">
+          <Text className="text-xs font-semibold text-slate-700">{action}</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
 }
 
 // ---------- বাটন ----------
-type Variant = 'primary' | 'outline' | 'danger' | 'soft' | 'ghost';
+type Variant = 'primary' | 'outline' | 'danger' | 'soft' | 'ghost' | 'dark';
 const V: Record<Variant, [string, string]> = {
   primary: ['bg-brand-600 active:bg-brand-700', 'text-white'],
+  dark: ['bg-slate-900 active:bg-black', 'text-white'],
   danger: ['bg-rose-500 active:bg-rose-600', 'text-white'],
-  outline: ['bg-white border-2 border-brand-600 active:bg-brand-50', 'text-brand-700'],
+  outline: ['bg-white border border-slate-200 active:bg-slate-50', 'text-slate-800'],
   soft: ['bg-brand-50 active:bg-brand-100', 'text-brand-700'],
   ghost: ['bg-transparent active:bg-slate-100', 'text-slate-600'],
 };
@@ -53,30 +120,44 @@ export function Btn({ title, onPress, variant = 'primary', loading, disabled, ic
   title: string; onPress?: () => void; variant?: Variant; loading?: boolean; disabled?: boolean; icon?: IconName; small?: boolean; className?: string;
 }) {
   const [bg, fg] = V[variant];
-  const color = fg === 'text-white' ? '#fff' : variant === 'ghost' ? '#475569' : '#047857';
+  const color = fg === 'text-white' ? '#fff' : variant === 'ghost' ? '#475569' : variant === 'outline' ? '#0F172A' : '#0E8F9B';
+  const glow = variant === 'primary' ? { elevation: 5, shadowColor: '#0E8F9B', shadowOpacity: 0.28, shadowRadius: 10, shadowOffset: { width: 0, height: 5 } } : undefined;
   return (
-    <Pressable onPress={onPress} disabled={disabled || loading} className={`flex-row items-center justify-center gap-2 rounded-2xl ${small ? 'py-2.5 px-4' : 'py-3.5 px-5'} ${bg} ${disabled || loading ? 'opacity-50' : ''} ${className}`}>
-      {loading ? <ActivityIndicator color={color} /> : icon ? <Icon name={icon} size={small ? 18 : 22} color={color} /> : null}
-      <Text className={`font-bold ${small ? 'text-base' : 'text-lg'} ${fg}`}>{title}</Text>
+    <Pressable onPress={onPress} disabled={disabled || loading} style={glow} className={`flex-row items-center justify-center gap-2 rounded-full ${small ? 'py-2.5 px-4' : 'py-3.5 px-5'} ${bg} ${disabled || loading ? 'opacity-50' : ''} ${className}`}>
+      {loading ? <ActivityIndicator color={color} /> : icon ? <Icon name={icon} size={small ? 18 : 21} color={color} /> : null}
+      <Text className={`font-bold ${small ? 'text-sm' : 'text-base'} ${fg}`}>{title}</Text>
     </Pressable>
   );
 }
 
 export function Chip({ label, on, onPress, className = '' }: { label: string; on?: boolean; onPress?: () => void; className?: string }) {
   return (
-    <Pressable onPress={onPress} className={`px-4 py-2 rounded-full border ${on ? 'bg-brand-600 border-brand-600' : 'bg-white border-slate-300 active:bg-slate-50'} ${className}`}>
-      <Text className={`text-base ${on ? 'text-white font-bold' : 'text-slate-700'}`}>{label}</Text>
+    <Pressable onPress={onPress} className={`px-4 py-2 rounded-full border ${on ? 'bg-slate-900 border-slate-900' : 'bg-white border-line active:bg-slate-50'} ${className}`}>
+      <Text className={`text-sm ${on ? 'text-white font-bold' : 'text-slate-700'}`}>{label}</Text>
     </Pressable>
   );
 }
 export const Chips = ({ children }: { children: React.ReactNode }) => <View className="flex-row flex-wrap gap-2">{children}</View>;
 
+// ---------- সুইচ (২-৩টি অপশন, একটা সক্রিয় = কালো পিল) ----------
+export function Segment<T extends string | number>({ value, onChange, options, small }: { value: T; onChange: (v: T) => void; options: readonly (readonly [T, string])[]; small?: boolean }) {
+  return (
+    <View className="flex-row bg-white rounded-full p-1 border border-line">
+      {options.map(([k, l]) => (
+        <Pressable key={String(k)} onPress={() => onChange(k)} className={`flex-1 items-center rounded-full ${small ? 'py-2' : 'py-3'} ${value === k ? 'bg-slate-900' : ''}`}>
+          <Text className={`${small ? 'text-xs' : 'text-sm'} ${value === k ? 'text-white font-bold' : 'text-slate-500'}`}>{l}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 // ---------- পেজ ----------
 export function Page({ children, onRefresh, refreshing }: { children: React.ReactNode; onRefresh?: () => void; refreshing?: boolean }) {
   return (
     <ScrollView
-      className="flex-1" keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 14 }}
-      refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} colors={['#059669']} /> : undefined}
+      className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 28, gap: 14 }}
+      refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} colors={['#18A9B7']} /> : undefined}
     >
       {children}
     </ScrollView>
@@ -85,48 +166,58 @@ export function Page({ children, onRefresh, refreshing }: { children: React.Reac
 export const H1 = ({ children, sub }: { children: React.ReactNode; sub?: string }) => (
   <View>
     <Text className="text-2xl font-bold">{children}</Text>
-    {sub ? <Text className="text-slate-500 -mt-0.5">{sub}</Text> : null}
+    {sub ? <Text className="text-slate-500 text-sm">{sub}</Text> : null}
   </View>
 );
-export const H2 = ({ children }: { children: React.ReactNode }) => <Text className="text-lg font-bold mt-1">{children}</Text>;
+export const H2 = ({ children }: { children: React.ReactNode }) => <Text className="text-base font-bold mt-1">{children}</Text>;
 export const Label = ({ children }: { children: React.ReactNode }) => <Text className="text-sm font-semibold text-slate-600 mb-1.5">{children}</Text>;
 export const Muted = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => <Text className={`text-sm text-slate-500 ${className}`}>{children}</Text>;
 
 export function Notice({ kind, children }: { kind: 'ok' | 'err' | 'warn' | 'info'; children?: React.ReactNode }) {
   if (!children) return null;
-  const s = { ok: ['bg-emerald-50 border-emerald-200', 'text-emerald-800', 'checkmark-circle'], err: ['bg-rose-50 border-rose-200', 'text-rose-700', 'alert-circle'],
-    warn: ['bg-amber-50 border-amber-200', 'text-amber-800', 'warning'], info: ['bg-sky-50 border-sky-200', 'text-sky-800', 'information-circle'] }[kind];
-  const col = { ok: '#065F46', err: '#BE123C', warn: '#92400E', info: '#075985' }[kind];
+  const s = { ok: ['bg-emerald-50 border-emerald-100', 'text-emerald-800', 'checkmark-circle'], err: ['bg-rose-50 border-rose-100', 'text-rose-700', 'alert-circle'],
+    warn: ['bg-amber-50 border-amber-100', 'text-amber-800', 'warning'], info: ['bg-brand-50 border-brand-100', 'text-brand-800', 'information-circle'] }[kind];
+  const col = { ok: '#065F46', err: '#BE123C', warn: '#92400E', info: '#0B747F' }[kind];
   return (
-    <View className={`flex-row gap-2 items-start rounded-xl border px-3 py-2.5 ${s[0]}`}>
+    <View className={`flex-row gap-2 items-start rounded-2xl border px-3.5 py-3 ${s[0]}`}>
       <Icon name={s[2] as IconName} size={20} color={col} />
-      <Text className={`flex-1 ${s[1]}`}>{children}</Text>
+      <Text className={`flex-1 text-sm ${s[1]}`}>{children}</Text>
     </View>
   );
 }
 export const Empty = ({ text, icon = 'file-tray-outline' }: { text: string; icon?: IconName }) => (
-  <View className="items-center py-8 gap-2"><Icon name={icon} size={34} color="#CBD5E1" /><Text className="text-slate-400 text-center">{text}</Text></View>
+  <View className="items-center py-10 gap-3">
+    <IconBox name={icon} size={56} tone="slate" />
+    <Text className="text-slate-400 text-center">{text}</Text>
+  </View>
 );
-export const Loading = () => <View className="py-10"><ActivityIndicator color="#059669" size="large" /></View>;
+export const Loading = () => <View className="py-10"><ActivityIndicator color="#18A9B7" size="large" /></View>;
 
 export function Badge({ label, tone = 'gray' }: { label: string; tone?: 'gray' | 'red' | 'amber' | 'green' | 'orange' }) {
-  const t = { gray: 'bg-slate-100 text-slate-600', red: 'bg-rose-100 text-rose-700', amber: 'bg-amber-100 text-amber-700', green: 'bg-emerald-100 text-emerald-700', orange: 'bg-orange-100 text-orange-700' }[tone].split(' ');
-  return <View className={`px-2 py-0.5 rounded-full self-start ${t[0]}`}><Text className={`text-xs ${t[1]}`}>{label}</Text></View>;
+  const t = { gray: 'bg-slate-100 text-slate-600', red: 'bg-rose-50 text-rose-600', amber: 'bg-amber-50 text-amber-700', green: 'bg-emerald-50 text-emerald-700', orange: 'bg-orange-50 text-orange-700' }[tone].split(' ');
+  return <View className={`px-2.5 py-1 rounded-full self-start ${t[0]}`}><Text className={`text-xs font-semibold ${t[1]}`}>{label}</Text></View>;
 }
 
-const TONE = { green: 'text-emerald-700', red: 'text-rose-600', amber: 'text-amber-600', none: 'text-slate-900', pink: 'text-bkash' };
-export function Stat({ label, value, tone = 'none', className = '' }: { label: string; value: string; tone?: keyof typeof TONE; className?: string }) {
+const TONE = { green: 'text-emerald-600', red: 'text-rose-600', amber: 'text-amber-600', none: 'text-slate-900', pink: 'text-bkash' };
+export function Stat({ label, value, tone = 'none', icon, sub, className = '' }: {
+  label: string; value: string; tone?: keyof typeof TONE; icon?: IconName; sub?: React.ReactNode; className?: string;
+}) {
+  const box: BoxTone = tone === 'red' ? 'red' : tone === 'amber' ? 'amber' : tone === 'green' ? 'green' : 'slate';
   return (
-    <Card className={`flex-1 ${className}`}>
-      <Text className="text-slate-500 text-sm">{label}</Text>
-      <Text className={`text-2xl font-bold mt-0.5 ${TONE[tone]}`}>{value}</Text>
+    <Card className={`flex-1 gap-2 ${className}`}>
+      <View className="flex-row items-center gap-2">
+        {icon ? <IconBox name={icon} size={32} tone={box} /> : null}
+        <Text className="text-slate-500 text-xs flex-1" numberOfLines={1}>{label}</Text>
+      </View>
+      <Text className={`text-xl font-bold ${TONE[tone]}`}>{value}</Text>
+      {sub}
     </Card>
   );
 }
 export const Row = ({ l, v, bold, tone = 'none', last }: { l: string; v: string | number; bold?: boolean; tone?: keyof typeof TONE; last?: boolean }) => (
-  <View className={`flex-row justify-between items-center py-2.5 ${last ? '' : 'border-b border-slate-100'}`}>
-    <Text className={`${bold ? 'font-bold text-lg' : 'text-slate-700'}`}>{l}</Text>
-    <Text className={`${bold ? 'font-bold text-lg' : 'font-semibold'} ${TONE[tone]}`}>{v}</Text>
+  <View className={`flex-row justify-between items-center py-3 ${last ? '' : 'border-b border-line'}`}>
+    <Text className={`${bold ? 'font-bold text-base' : 'text-slate-600 text-sm'}`}>{l}</Text>
+    <Text className={`${bold ? 'font-bold text-base' : 'font-semibold text-sm'} ${TONE[tone]}`}>{v}</Text>
   </View>
 );
 export const Split = ({ children }: { children: React.ReactNode }) => <View className="flex-row gap-3">{children}</View>;
@@ -137,8 +228,8 @@ export function Sheet({ visible, onClose, title, children }: { visible: boolean;
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
       <Pressable className="flex-1 bg-black/40 justify-end" onPress={onClose}>
-        <Pressable className="bg-white rounded-t-3xl max-h-[80%]" style={{ paddingBottom: ins.bottom + 12 }} onPress={() => {}}>
-          <View className="items-center pt-2.5"><View className="w-10 h-1 rounded-full bg-slate-300" /></View>
+        <Pressable className="bg-white max-h-[80%]" style={{ borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingBottom: ins.bottom + 12 }} onPress={() => {}}>
+          <View className="items-center pt-2.5"><View className="w-10 h-1 rounded-full bg-slate-200" /></View>
           {title ? <Text className="text-lg font-bold px-5 pt-3 pb-1">{title}</Text> : null}
           {children}
         </Pressable>
@@ -160,8 +251,8 @@ export function Pick({ label, value, options, onChange, placeholder = 'বেছ
   return (
     <View className="flex-1">
       {label ? <Label>{label}</Label> : null}
-      <Pressable onPress={() => setOpen(true)} className="flex-row items-center justify-between bg-white border border-slate-300 rounded-xl px-4 py-3.5 active:bg-slate-50">
-        <Text className={`text-lg flex-1 ${cur ? '' : 'text-slate-400'}`} numberOfLines={1}>{cur ? cur.label + (cur.sub ? `  (${cur.sub})` : '') : placeholder}</Text>
+      <Pressable onPress={() => setOpen(true)} className="flex-row items-center justify-between bg-white border border-line rounded-2xl px-4 py-3.5 active:bg-slate-50">
+        <Text className={`text-base flex-1 ${cur ? '' : 'text-slate-400'}`} numberOfLines={1}>{cur ? cur.label + (cur.sub ? `  (${cur.sub})` : '') : placeholder}</Text>
         <Icon name="chevron-down" size={20} color="#64748B" />
       </Pressable>
       <Sheet visible={open} onClose={close} title={label || placeholder}>
@@ -169,10 +260,10 @@ export function Pick({ label, value, options, onChange, placeholder = 'বেছ
         <FlatList
           data={shown} keyExtractor={(o) => o.value} keyboardShouldPersistTaps="handled" style={{ flexGrow: 0 }}
           ListHeaderComponent={noneLabel ? (
-            <Pressable onPress={() => { onChange(''); close(); }} className="px-5 py-3.5 border-b border-slate-100 active:bg-slate-50"><Text className="text-slate-500">{noneLabel}</Text></Pressable>
+            <Pressable onPress={() => { onChange(''); close(); }} className="px-5 py-3.5 border-b border-line active:bg-slate-50"><Text className="text-slate-500">{noneLabel}</Text></Pressable>
           ) : null}
           renderItem={({ item }) => (
-            <Pressable onPress={() => { onChange(item.value); close(); }} className={`px-5 py-3.5 border-b border-slate-100 flex-row justify-between items-center active:bg-slate-50 ${item.value === value ? 'bg-brand-50' : ''}`}>
+            <Pressable onPress={() => { onChange(item.value); close(); }} className={`px-5 py-3.5 border-b border-line flex-row justify-between items-center active:bg-slate-50 ${item.value === value ? 'bg-brand-50' : ''}`}>
               <Text className={`text-base flex-1 ${item.value === value ? 'font-bold text-brand-700' : ''}`}>{item.label}</Text>
               {item.sub ? <Text className="text-slate-500 text-sm ml-3">{item.sub}</Text> : null}
             </Pressable>
