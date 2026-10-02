@@ -36,8 +36,8 @@ export default function Expense() {
         <View className="flex-row items-center pt-1">
           <Text className="text-slate-300 font-bold mr-2" style={{ fontSize: 36, lineHeight: 52 }}>৳</Text>
           <TextInput
-            value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="0" placeholderTextColor="#CBD5E1" selectionColor="#18A9B7"
-            style={{ flex: 1, fontFamily: FONT.bold, fontSize: 40, height: 64, padding: 0, color: '#0F172A' }}
+            value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="0" placeholderTextColor="#94A3B8" selectionColor="#18A9B7" className="text-slate-900"
+            style={{ flex: 1, fontFamily: FONT.bold, fontSize: 40, height: 64, padding: 0 }}
           />
         </View>
         <View className="flex-row gap-2">

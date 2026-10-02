@@ -70,6 +70,10 @@ const delFile = async (f: string) => { try { await SQLite.deleteDatabaseAsync(f)
 
 export const listShopsNow = async () => listShops(await registry());
 
+// হালকা / গাঢ় থিমের পছন্দ (registry-তে সেভ থাকে)
+export const getThemePref = async () => getMeta(await registry(), 'theme');
+export const setThemePref = async (v: string) => setMeta(await registry(), 'theme', v);
+
 // অ্যাপ চালু: শেষবার খোলা দোকান খোলে। কোনো দোকান না থাকলে নতুন ফাঁকা (pending) ডাটাবেস খোলে।
 export async function bootDb() {
   const r = await registry();

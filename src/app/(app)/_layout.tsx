@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar, Icon, IconBox, IconName, SHADOW, Sheet, Text } from '@/components/ui';
 import { confirm } from '@/components/ui';
 import ShopSwitcher from '@/components/ShopSwitcher';
+import { useTheme } from '@/lib/theme';
 import { useSession } from '@/store/session';
 
 type Nav = { href: string; icon: IconName; label: string };
@@ -39,6 +40,7 @@ export default function AppLayout() {
   const { user, shop, isPharma, employee, signOut, shops, role } = useSession();
   const path = usePathname();
   const ins = useSafeAreaInsets();
+  const { dark, c } = useTheme();
   const [open, setOpen] = useState(false);
   const [swap, setSwap] = useState(false);
   if (!user) return <Redirect href="/login" />;
@@ -61,7 +63,7 @@ export default function AppLayout() {
     return (
       <Link href={n.href as any} asChild>
         <Pressable
-          style={on ? { height: 46, paddingHorizontal: 14, borderRadius: 23, backgroundColor: '#0F172A', flexDirection: 'row', alignItems: 'center', gap: 6, ...SHADOW } : { width: 46, height: 46, borderRadius: 23, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', ...SHADOW }}
+          style={on ? { height: 46, paddingHorizontal: 14, borderRadius: 23, backgroundColor: c.ink, flexDirection: 'row', alignItems: 'center', gap: 6, ...SHADOW } : { width: 46, height: 46, borderRadius: 23, backgroundColor: c.card, alignItems: 'center', justifyContent: 'center', ...SHADOW }}
         >
           <Icon name={on ? n.icon : (`${n.icon}-outline` as IconName)} size={21} color={on ? '#fff' : '#94A3B8'} />
           {on ? <Text className="text-white font-bold text-sm">{n.label}</Text> : null}
@@ -74,11 +76,11 @@ export default function AppLayout() {
 
   return (
     <View className="flex-1 bg-canvas">
-      <StatusBar style="dark" />
+      <StatusBar style={dark ? 'light' : 'dark'} />
       {/* ---------- উপরের হেডার ---------- */}
       <View className="flex-row items-center justify-between px-4 pb-2" style={{ paddingTop: ins.top + 10 }}>
         <Pressable onPress={() => role === 'OWNER' && setSwap(true)} className="flex-row items-center gap-3 flex-1 active:opacity-70">
-          <View style={{ width: 46, height: 46, borderRadius: 16, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', ...SHADOW }}>
+          <View style={{ width: 46, height: 46, borderRadius: 16, backgroundColor: c.card, alignItems: 'center', justifyContent: 'center', ...SHADOW }}>
             <Icon name={isPharma ? 'medkit' : 'storefront'} size={22} color="#18A9B7" />
           </View>
           <View className="flex-1">
@@ -101,7 +103,7 @@ export default function AppLayout() {
       <View className="flex-row items-center justify-center gap-2 px-3 pt-2" style={{ paddingBottom: Math.max(ins.bottom, 10) + 4 }}>
         {left.map((n) => <Item key={n.href} n={n} />)}
         {!employee && (
-          <Pressable onPress={() => setOpen(true)} className="items-center justify-center bg-brand-600 active:bg-brand-700" style={{ width: 50, height: 50, borderRadius: 25, elevation: 6, shadowColor: '#0E8F9B', shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 5 } }}>
+          <Pressable onPress={() => setOpen(true)} className="items-center justify-center bg-brand-600 active:opacity-80" style={{ width: 50, height: 50, borderRadius: 25, elevation: 6, shadowColor: '#0E8F9B', shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 5 } }}>
             <Icon name="add" size={30} color="#fff" />
           </Pressable>
         )}

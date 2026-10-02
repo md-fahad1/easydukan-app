@@ -1,16 +1,20 @@
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { Btn, Card, confirm, errMsg, IconBox, Input, Muted, Notice, Page, Text } from '@/components/ui';
+import { Btn, Card, confirm, errMsg, IconBox, Input, Muted, Notice, Page, Segment, Text } from '@/components/ui';
 import { pickBackup, shareBackup } from '@/lib/files';
 import { changePassword } from '@/services/auth';
 import { exportAll, importAll } from '@/services/backup';
+import { chooseTheme, savedTheme, ThemePref } from '@/lib/theme';
 import { useSession } from '@/store/session';
 
 export default function Settings() {
   const { shop, user, reload, role, removeCurrent, shops } = useSession();
   const router = useRouter();
   const [old, setOld] = useState(''); const [nw, setNw] = useState(''); const [msg, setMsg] = useState(''); const [err, setErr] = useState('');
+  const [theme, setTheme] = useState<ThemePref>('system');
+  useEffect(() => { savedTheme().then(setTheme); }, []);
+  const pickTheme = (t: ThemePref) => { setTheme(t); chooseTheme(t); };
   const run = async (fn: () => Promise<any>, ok: string) => { setErr(''); setMsg(''); try { await fn(); setMsg(ok); } catch (e) { setErr(errMsg(e)); } };
   return (
     <Page>
@@ -20,6 +24,11 @@ export default function Settings() {
           <Text className="text-lg font-bold" numberOfLines={1}>{shop?.name}</Text>
           <Muted>{shop?.shopType} · {user?.name}</Muted>
         </View>
+      </Card>
+      <Card className="gap-3">
+        <View className="flex-row items-center gap-2.5"><IconBox name="moon" size={34} tone="slate" /><Text className="font-bold text-base">অ্যাপের রং</Text></View>
+        <Segment value={theme} onChange={pickTheme} options={[['system', 'ফোনের মতো'], ['light', 'হালকা'], ['dark', 'গাঢ়']]} />
+        <Muted>গাঢ় মোডে রাতে বা কম আলোতে চোখে কম চাপ পড়ে।</Muted>
       </Card>
       <Notice kind="ok">{msg}</Notice><Notice kind="err">{err}</Notice>
       {role === 'OWNER' && (

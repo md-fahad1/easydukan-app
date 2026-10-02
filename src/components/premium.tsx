@@ -5,6 +5,7 @@ import React, { forwardRef, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, Pressable, StyleProp, StyleSheet, TextInput, TextInputProps, View, ViewStyle } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { FONT, Icon, IconName, Text } from '@/components/ui';
+import { useTheme } from '@/lib/theme';
 
 export const C = {
   t0: '#12A4B3', t1: '#5ED6D8',   // উপরের টিল গ্রেডিয়েন্ট (উপর → নিচ)
@@ -76,19 +77,20 @@ export function Rings({ style }: { style?: StyleProp<ViewStyle> }) {
 // error = true হলে শুধু লাল; error = "লেখা" হলে নিচে লেখাও দেখায়।
 type PInputProps = TextInputProps & { icon?: IconName; secure?: boolean; error?: string | boolean };
 export const PInput = forwardRef<TextInput, PInputProps>(function PInput({ icon, secure, error, ...p }, ref) {
+  const { c } = useTheme();
   const [on, setOn] = useState(false);
   const [show, setShow] = useState(false);
   const bad = !!error;
   return (
     <View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, height: 56, paddingHorizontal: 18, borderRadius: 20, borderWidth: 1.5, backgroundColor: bad ? '#FFF1F2' : on ? '#ECFBFC' : C.field, borderColor: bad ? C.err : on ? C.main : 'transparent' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, height: 56, paddingHorizontal: 18, borderRadius: 20, borderWidth: 1.5, backgroundColor: bad ? c.errBg : on ? c.focusBg : c.field, borderColor: bad ? C.err : on ? C.main : 'transparent' }}>
         {icon ? <Icon name={icon} size={21} color={bad ? C.err : on ? C.main : '#9CA3AF'} /> : null}
         <TextInput
           ref={ref}
           placeholderTextColor="#9CA3AF"
           selectionColor={C.main}
           secureTextEntry={secure && !show}
-          style={{ flex: 1, fontSize: 16, color: C.ink, fontFamily: FONT.reg, paddingVertical: 0 }}
+          style={{ flex: 1, fontSize: 16, color: c.text, fontFamily: FONT.reg, paddingVertical: 0 }}
           {...p}
           onFocus={(e) => { setOn(true); p.onFocus?.(e); }}
           onBlur={(e) => { setOn(false); p.onBlur?.(e); }}
@@ -112,10 +114,11 @@ export const PInput = forwardRef<TextInput, PInputProps>(function PInput({ icon,
 // ---------- বাটন (পুরো গোল) ----------
 // primary = টিল, dark = গাঢ় নেভি, soft = হালকা ধূসর
 export function PButton({ title, icon, onPress, loading, variant = 'primary' }: { title: string; icon?: IconName; onPress?: () => void; loading?: boolean; variant?: 'primary' | 'dark' | 'soft' }) {
+  const { c } = useTheme();
   const s = useRef(new Animated.Value(1)).current;
   const press = (to: number) => Animated.spring(s, { toValue: to, speed: 40, bounciness: 4, useNativeDriver: true }).start();
-  const bg = variant === 'primary' ? C.main : variant === 'dark' ? C.navy : C.field;
-  const fg = variant === 'soft' ? C.ink : '#fff';
+  const bg = variant === 'primary' ? C.main : variant === 'dark' ? c.navy : c.field;
+  const fg = variant === 'soft' ? c.text : '#fff';
   return (
     <Animated.View style={[{ transform: [{ scale: s }], borderRadius: 28, backgroundColor: bg }, variant === 'primary' && { elevation: 6, shadowColor: C.deep, shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } }]}>
       <Pressable onPress={onPress} disabled={loading} onPressIn={() => press(0.98)} onPressOut={() => press(1)} style={{ height: 56, borderRadius: 28, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}>

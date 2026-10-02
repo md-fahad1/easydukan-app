@@ -9,6 +9,7 @@ import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui';
 import { bootDb, getActiveId, isPending, listShopsNow } from '@/db/client';
+import { loadTheme } from '@/lib/theme';
 import { getShop, restoreSession } from '@/services/auth';
 import { Boot, SessionProvider, useSession } from '@/store/session';
 
@@ -27,6 +28,7 @@ export default function Root() {
     (async () => {
       try {
         await bootDb();
+        await loadTheme();
         const user = await restoreSession();
         setBoot({ user, shop: await getShop(), shops: await listShopsNow(), activeId: getActiveId(), pending: isPending() });
       } catch (e: any) { setFatal(e?.message || 'ডাটাবেস চালু করা যায়নি'); }
